@@ -165,3 +165,6 @@ class MainActivity : AppCompatActivity() {
 
     }
 }
+
+//author: https://github.com/import-regex
+//license: GNU Affero General Public License v3.0
