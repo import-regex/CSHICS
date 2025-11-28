@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <!-- Spacer to push content down from the top -->
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/ipAddressTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="1dp"
+        android:gravity="center"
+        android:text="Verify storage path and start..."
+        android:textSize="20sp"
+        android:textIsSelectable="true"
+        android:layout_weight="0"/>
+
+    <TextView
+        android:id="@+id/infoTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_horizontal"
+        android:lineSpacingExtra="4dp"
+        android:text="The app suggests USB>SD>internal storage depending
+on what's available. Clean up your storage device completely!"
+        android:textSize="16sp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        android:layout_weight="10"/>
+
+    <EditText
+        android:id="@+id/pathEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Storage Path"
+        android:inputType="textNoSuggestions"
+        android:minHeight="24dp"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="4dp">
+
+        <!-- Left Button -->
+        <Button
+            android:id="@+id/wakeLockButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="no screen sleep"/>
+
+        <!-- Right Button (replaces your old applyPathButton) -->
+        <Button
+            android:id="@+id/applyPathButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Apply &amp; Start"/>
+
+    </LinearLayout>
+
+</LinearLayout>

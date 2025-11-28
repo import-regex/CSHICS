@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<!-- saved from url=(0056)file:///D:/Training/CSHICS/app/src/main/assets/info.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CSHICS (1.0) Readme</title>
+<style>
+  :root{
+    --bg:#0f1113;
+    --panel:#0c0d0e;
+    --text:#e6eef6;
+    --muted:#aab6c4;
+    --accent:#3aa0ff;
+    --max-width:900px;
+  }
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+  .wrap{box-sizing:border-box;max-width:var(--max-width);margin:28px auto;padding:28px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.004));border-radius:10px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 6px 30px rgba(0,0,0,0.6);}
+  header{display:flex;align-items:baseline;gap:12px;margin-bottom:18px}
+  h1{font-size:1.35rem;margin:0;color:var(--text);font-weight:600;letter-spacing:0.2px}
+  .meta{color:var(--muted);font-size:.9rem}
+  main{max-height:72vh;overflow:auto;padding-right:8px}
+  h2{font-size:1.05rem;margin:18px 0 8px 0;color:var(--accent);font-weight:600}
+  h3{font-size:.98rem;margin:14px 0 6px 0;color:var(--text);font-weight:600}
+  p{line-height:1.55;margin:8px 0;color:var(--muted)}
+  ul,ol{margin:8px 0 8px 1.1rem;color:var(--muted);line-height:1.5}
+  pre,code{font-family:Menlo,Consolas,monospace;background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:6px;color:#dbe9ff;overflow:auto}
+  pre{padding:12px;border-left:3px solid rgba(255,255,255,0.02);white-space:pre-wrap}
+  .note{display:inline-block;padding:6px 8px;border-radius:8px;background:rgba(58,160,255,0.07);color:var(--accent);font-weight:600;margin:8px 0}
+  footer{margin-top:14px;color:var(--muted);font-size:.85rem}
+  /* scrollbar thin + subtle */
+  main::-webkit-scrollbar{width:10px}
+  main::-webkit-scrollbar-thumb{background:linear-gradient(#1f2326,#121315);border-radius:10px;border:2px solid transparent;background-clip:padding-box}
+  @media (max-width:720px){
+    .wrap{margin:12px;padding:18px}
+    h1{font-size:1.1rem}
+  }
+</style>
+<style id="__web-inspector-hide-shortcut-style__" class="__web-inspector-hide__marker-shortcut__">.__web-inspector-hide__marker-shortcut__::marker, 
+.__web-inspector-hide-shortcut__, .__web-inspector-hide-shortcut__ *
+{
+    visibility: hidden !important;
+}
+</style></head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>CSHICS - a low power DVR with motion sensing video capture for old Androids</h1>
+      <div class="meta">V1 • 2025</div>
+    </header>
+
+    <main>
+      
+
+      <div class="note">Build a private, cheap, wireless and low power video surveilance system with full user configurability</div>
+      <h2>Overview</h2>
+      <p>This app is a custom DVR only accessible from any device on a shared Wi-Fi network. It never talks to the real internet!
+<br>Any device/web-browser on the local network can run as video camera and store recordings to CSHICS whenever motion is detected.<br>The recordings can be stored to an SD Card, internal storage or even external USB devices like flash drives or even hard drives! NO ROOT access required. Old footage is deleted as necessary to save new footage.
+<br>You can filter, review and download all the saved footage using the /watch page.<br>
+The app is primarily a server for writing fetched files to a custom directory, but is also used for supporting functionality for the camera operations - initializing the page from a secure localhost source and disabling screenlock timers when in browser focus<br>Everything is highly configurable and optimized for minimal storage wear, network usage and CPU load on any of the devices.<br>Currently there is no support for live-viewing of the remote camera feeds<br><br></p>
+
+      <h2>Quick Start</h2>
+      <ol>
+        <li class="">Using the app</li><br>Thoroughly clean up your Android - ALL user and pre-installed apps (especially Google!) removed and disabled from the "all" tab in settings-apps. Delete all files from storage and install CSHICS (storage management is relative to the total capacity).<br>
+
+Start up a Hotspot, a Bluetooth tether or connect to a regular Wi-Fi router.<br>Open up the app, look at the auto generated path to storage. It should find something SD or sdcard1. USB storage paths are a bit more tricky. The default path is CSHICS's attempt to find removable storage. Sometimes path discovery fails and you need to set it manualy. You can change the path depending on the usecase. Also you might need to manually create the directory /{storage}?/{sdcard1}?/Android/data/com.example.CSHICS/files externally before the app can use it.
+<br><br>
+Obtain a 2nd, 3rd and so on Android, PC or even an iphone? running a 2017+ web browser and connect them to the same Wi-Fi/BTT/Hotspot. Any device can be the network host.<br>On Firefox 52 (or similar) you can load the page from a remote CSHICS using http://192.168.x.x:8080. There will be some bugs and errors.<br>Most other browsers require you to initialize the page from localhost:8080. Instal CSHICS locally for that purpose. In the camera page update the upload URL to the remote CSHICS used for storage.<br>Or if you actually intend on storing the files locally then keep the upload URL to localhost.<br>Some devices would sleep the screen after a few hours of no user inputs in the browser. This too can be solved by the CSHICS app running in the background just for the "no wake lock" function (press that button and keep it in the background). Doesn't matter if you run the server too or not. 
+<br>Any device can be a server and a camera simultaeniously. You can have multiple servers on the same network.<br>Sometimes you can download the camera page and load it as a file:/// in the address bar, but the localhost:8080 route is the most reliable. Opening it as a file:/// is the optimal way to run it on PC!<br><br>On the bottom of the page you have a download link and a "copy as url data" link. Those are convenience features for running the page as a local file:///... or even a data string for the URL bar of a browser.<br><br>Once you load up a camera page the settings are either pretty self-explanatory or barely explainable anyways. Read further sections to learn more.<br><br>Some Androids might sleep the screen after a few hours of no user inputs in the browser. Keep CSHICS in the background with the "no screen sleep" request enabled (no need to run the server) to prevent it.
+<br><br>
+        <li>Understanding the camera settings
+<br><br>Upload URL - The URL of the target CSHICS instance for recording storage<br>camera ID - user-assigned ID for distinguishing different cameras in the saved recordings.<br>Audio toggle - enabling causes errors and bugs in many cases. Web browsers are very sensitive about allowing any microphone data to fly by in any non httpS or localhost context.<br> Motion sensitivity - count of pixels changed enough to trigger a motion<br>Pixel sensitivity - brightness change per pixel required to pass as changed. Increase the value on old noisy cameras.<br>Detection refresh rate -rate of checking for motion. Higher=more accurate, CPU load. Lower=more sensitive<br>Recording duration - recording time duration. Used in both detection and always modes.
+<br>Advanced FHW - Framerate, Height and Width. This string updates with the values the camera uses once it's running.
+The value of 0 is treated as "auto"
+<br>By using a short recording duration (1s), a low framerate (5) and a high bitrate (10000) you functionally get a high quality photo burst.<br>
+Pixel skip step is yet another detection sensitivity setting. 1/PSS determines how many of the actual pixels in the frame are evaluated. If you set it to 200 or more you're creating big dead-zones in the frame. If you set it to 1 your CPU would overheat and system would lag.<br>Magnitude of pixels changed - another way to change the sensitivity to surface areas of the frame.
+<br><br></li>
+        <li>What happens with the stored recordings?</li>
+<br>To access your recordings simply load 192.168.x.x:8080/watch (preferably from a PC), where you read x x off of the CSHICS's screen. You can view and preview the videos there and download the files. Pick a time range and click download. Avoid enabling the previews if all files on screen are likely to be more than 500mb in size. 
+
+Loading the page takes a while, especially if the number of files on the server is too big. <br><br>CSHICS tracks the % of storage taken up times. Once it hits 80% of the total device capacity (usb, sd, internal) it will wipe 20% worth of files starting from the oldest. This means you lose 20% of your oldest videos from time to time. The storage usage lvl will never exceed 80%. These 20% margins are there to appease the memory controller and wear leveling algorithms.
+<br><br><li>I want CSHICS to serve my custom edit of the camera or /watch page. Or I want to serve my own miscaellanious file. What do I do?
+<br><br>
+You can use a /cusom/ subdirectory in the recording path. Example: <br>....../Android/data/com.example.CSHICS/files/custom/myfile.html<br>
+You can access your file using<br>http://192.168.x.x:8080/custom/myfile.html
+<br><br></li></ol>
+
+      <h2>Why make your own app?</h2>
+
+      <h3>Encountering a problem</h3>
+      <p>I have a problem. I need to build a cheap security camera system that draws no unnecessary power and is very efficient at how it manages it's storage. I want removable storage devices I can easily replace on failure.A "real" CCTV system costs $1000 and draws 50W of power while saving a low quality 24/7 recording.<br> A fake security camera costs $150, but the camera itself is worse than a criminal - camera setup requires real internet access 24/7 (your camera data is sold for chinese spying and AI training) and a setup app that ivades all your personal phone's privacy- wifi networks, GPS, IMEI, personal emails and so on.<br><br>
+I should probably build something out of old smartphones. They barely draw any power and have SD cards and USB ports. Their CPU can detect motion and encode video. There must be an Android app, right? The Google Play store is full of IP streaming camera apps, however even the most notorious ones lack basic user freedoms and obvious featues. Despite their flaws I thank them for being just a good enough tech demo to inspire me to build something better. While those apps do allow you to remotely watch a stream, detect motion and save recordings, they implement it in the most crude ways possible - continuous MJPEG and RTSP streams, CPU burners and no SD access.</p>
+
+      <h3>Building the solution</h3>
+      <p>After battling for ideas on how to make use of the existing apps I had to accept my fate as a Kotlin dev. The lack of basic system features paired with the underdeveloped landscape of 2012 Android meant it was time to take things into my own hands. I felt it was easier for me to build an app from scratch where I've curated how every feature is implemented than trying to fix the existing proofs of concept. It's 2025 and chatbots are now pretty mature. It's easier than ever to learn something and build things without specialized training. I have the ideas and ChatGPT and Gemini have the information.</p>
+
+      <h3>Ideology and the engineer's mindset</h3><p>I need to build something for the people that respects their intelligence, money and unique usecases. Yet I must figure out what assumptions can I make that would differentiate my app from building a new app for any specific usecase.
+<br>Using web pages - allows use outside of Android. Full transparency about what happens on your hardware.
+<br>A single apply button - one button action, much simpler code logic, much more convenient user experience.
+Uploading files on recording completion - a basic file upload keeps the network engineering simple. RTSP start-stop has its network and encoding compleixites and increases the server and client load. A 5 second record-and-stop window is enough to send a 1MB clip of whoever was a malicious actor and potentially tried to tamper with the camera.
+<br>Always shoot a video, not photos - a video is a sequence of pictures. If you keep the recording short enough and the framerate low you would store a video-encode efficient gallery of pictures.<br>Detect any motion anywhere on the screen - why would you point a camera at something if you don't want certain spots of motion? On a rare occasion you can write a custom detectMotion function anyways.
+<br>Suggest a storage directory - USB&gt;SD Card&gt;Internal prioritizes easily replacable and recoverable storage over the one-time-use chips on the phone's board.
+<br>No passwords on anything - phones have lock screens anyways. Adding user credentials features on the webpage wouldn't do much either. Sometimes you need something that just works.
+<br>App crashes on invalid path - why would you use an app in a useless mode? Just don't post files to it.
+<br>Don't fill storage above 80%, always wipe 20% chunks - most memory controllers prefer you never fill your storage close to the limit. It makes wear balancing much harder and wears out certain sectors much faster. A 20% chunk means you're leaving more than enough space for wear balancing.
+<br>The app only runs on android 4.1.x - You can compile it for even older versions in android studio (just set minSdk to 14), but the development experience is even worse. I could publish more APKs on request.<br>
+Assume you're working with mostly empty storage - It's a security surveilance app. You need a basic but robust algorithm that perfectly utilizes storage purely dedicated to the purpose.
+Have a mysterious name for the app - there's no 2 word explanation of what and why the app does. The name is there to inspire curiosity for the product's description.
+<br><br>
+In case you really need some custom functionality you can load up the project in Android Studio and develop it further. All the contents are readable, maintainable, simple and understandable.    
+</p><h2>Troubleshooting<ul>
+        <li>I loaded 192.168.x.x:8080 in the browser. I have problems and bugs whenever I click apply.<br>That's typical in most cases. Run the CSHICS app on the same device and initialize the page from localhost:8080. Sometimes you can click "download page" on the bottom and enter it as a file:///{pathtolocalfile}.html<br>
+You can experiment with "copy html to clipboard" and pasting it in the address bar too. <br><br>
+</li>
+        <li>App crashes when I click apply<br>Check if the path exists in a file manager (or use adb shell). Try creating the correct directory externally. It should be in the format: {storagetype_base}/Android/data/com.example.CSHICS/files. Many Androids have unique storage path bases which require you to enter the correct path manually.<br><br></li><li>Enabling audio for the recordings causes problems<br>Browsers are most strict about allowing audio capture from insecure sources. Your only solution is to install the app locally and load the page from localhost:8080 for a moment. Then set the upload address to the actual storage server.</li><br><li>My Android as camera loses charge and shuts off after a while<br>Make sure the display brightness is set to minimum, background processes cut and the camera settings aren't CPU intensive. Use a high quality charger that can maintain 5V 1.5A without overheating, voltage ripples or pulsation. Some charge ports and plugs make bad contact - pick a good cable. Most cables have too much "copper" resistance - solder &lt;40cm d0.5mm solid copper wires in parallel to the 5V lines.<br>
+Some devices need more than 0.5A to maintain charge - this requires a short circuit on their data pins unlock 1-2A of charging current. Use a standard 4 wire USB cable wired to a standard charger or build a custom circuit with a 5V 1-2A supply and shorted data pins on the micro usb port.</li>
+<br><li>The screen shuts off after a few hours and the camera stops recording<br>Just run CSHICS in the background with the "no screen sleep" option toggled on. It doesn't matter if you start the server or not, the app can either be a true server or just support the camera operations locally. Or both. You don't need the "no screen sleep" option if the device is only used as a server.<br><br></li>
+
+<li>How do I mount my Android to a wall or a post or something?<br>Check <a href="https://www.printables.com/@HotFilament_2333530">@HotFilament_2333530</a> for 3D printable models and check @hotfilament on Youtube for a full blog on the project.</li>
+      </ul></h2><p></p>
+<h2>Author</h2>
+      <pre><code>github.com/import-regex @hotfilament</code></pre>
+
+      
+      
+
+      <h2>License</h2>
+      <p><!-- Additional notes or references --></p>
+
+      <footer>All original work • CC-BY-4.0</footer>
+    </main>
+  </div>
+
+
+</body></html>

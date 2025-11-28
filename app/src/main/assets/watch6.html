@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="UTF-8">
+<title>Watch stored recordings</title>
+<style>
+body { font-family:sans-serif; margin:0; padding:1em; background:#111; color:#eee }
+input,select,button,label { margin:.3em; padding:.3em; background:#222; color:#eee; border:1px solid #555 }
+#results { margin-top:1em; display:flex; flex-wrap:wrap; gap:1em }
+.card { border:1px solid #555; padding:.5em; width:300px; background:#1b1b1b }
+video { width:100%; height:auto; display:block; margin-top:.3em; background:#000 }
+#spliceContainer { margin:1em 0; text-align:center; }
+#spliceContainer button { margin:0 1em; padding:.3em 1em; }
+#statusMsg {font-size: 1.1em;font-weight: bold;color: #ccc;margin: 0.5em 0;}
+</style>
+
+<body>
+<h2>Watch stored recordings</h2>
+<label>Uploader ID: <input id="uploader" type="text" placeholder="optional"></label>
+<label>From: <input id="from" type="datetime-local"></label>
+<label>To: <input id="to" type="datetime-local"></label>
+<button id="filter">Filter</button>
+<label><input type="checkbox" id="showPreviews"> Show video previews</label>
+<button id="downloadAll">Download all displayed</button>
+<button id="splice">Combine all displayed</button>
+<button id="sort">Fix sorting glitches</button>
+<div id="statusMsg">Showing a sample preview of the last 10 uploads</div>
+<div id="spliceContainer"></div>
+<div id="results"></div>
+
+<script type="module">
+const res = await fetch('/files.json')
+const raw = await res.json()
+
+const half = raw.length/2
+const names = raw.slice(0,half)
+const sizes = raw.slice(half)
+let oldest,newest,parsed;
+const merged = names.map((n,i)=>({name:n,size:sizes[i]}))
+
+function parseFile(f){
+  try {
+    const m = f.match(/(\d{13})_r(\w+)\.(\w+)$/)
+    if(!m) throw 1
+    return { t:new Date(Number(m[1])), id:m[2], name:f }
+  } catch (e) {
+    const fb = f.match(/(\d{13})/)
+    if(fb) return { t:new Date(Number(fb[1])), id:null, name:f }
+    return null
+  }
+}
+
+parsed = merged.map(v=>{
+  const p = parseFile(v.name)
+  if(!p) return null
+  p.size = v.size
+  return p
+}).filter(x=>x)
+
+//parsed.sort((a,b)=>b.t - a.t)
+setCalendarRanges();
+
+function fmt(d){
+  let p=n=>n.toString().padStart(2,'0')
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+function setCalendarRanges () {
+  oldest = parsed[parsed.length-1]?.t || new Date(0)
+  newest = parsed[0]?.t || new Date(0)
+  let fmin = fmt(oldest)
+  document.getElementById('from').min   = fmin
+  document.getElementById('from').value = fmin
+  document.getElementById('to').max     = fmt(new Date())
+  document.getElementById('to').value   = fmt(newest)
+}
+
+const fileCache = {}
+async function getFileBlob(name){
+  if(fileCache[name]) return fileCache[name]
+  const r = await fetch(`/download/${name}`)
+  const b = await r.blob()
+  fileCache[name] = b
+  return b
+}
+
+let currentDisplay = []
+
+async function render(list){
+  const showVids = document.getElementById('showPreviews').checked
+  const r = document.getElementById('results')
+  r.innerHTML = ''
+  for(const x of list){
+    const c = document.createElement('div')
+    c.className = 'card'
+    let vidHtml = ''
+    if(showVids){
+      const blob = await getFileBlob(x.name)
+      const url = URL.createObjectURL(blob)
+      vidHtml = `<video controls src="${url}"></video>`
+    }
+    const mb = (x.size/1_000_000).toFixed(2)
+    c.innerHTML =
+      `<b>${x.name}</b><br>${x.t.toLocaleString()}<br>
+       Size: ${mb} MB<br>
+       Uploader: ${x.id||'unknown'}<br>${vidHtml}
+       <button>Download</button>`
+    c.querySelector('button').onclick = async () => {
+      const blob = await getFileBlob(x.name)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = x.name
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
+    r.appendChild(c)
+  }
+
+  currentDisplay = list
+
+  const total = list.reduce((a,b)=>a + b.size, 0)
+  const gb = (total/1_000_000_000).toFixed(2)
+  document.getElementById('downloadAll').textContent =
+    `Download all displayed (${gb}GB)`
+}
+
+async function filterFiles(){
+  const m = document.getElementById('statusMsg')
+  if(m) m.remove()
+
+  const u = document.getElementById('uploader').value.trim()
+  const from = new Date(document.getElementById('from').value || 0)
+  const to = new Date(document.getElementById('to').value || Date.now()+1)
+  const out = parsed.filter(x=>{
+    if(x.t<from || x.t>to) return false
+    if(u!=='' && x.id!==null && x.id!==u) return false
+    return true
+  })
+  await render(out)
+}
+
+document.getElementById('filter').onclick = filterFiles
+document.getElementById('showPreviews').onchange = () => render(currentDisplay)
+
+await render(parsed.slice(0,10))
+
+document.getElementById('downloadAll').onclick = async () => {
+  for(const x of currentDisplay){
+    const blob = await getFileBlob(x.name)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = x.name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  }
+}
+
+document.getElementById('splice').onclick = async () => {
+  if(!currentDisplay.length) return
+  const container = document.getElementById('spliceContainer')
+  container.innerHTML = ''
+
+  let index = 0
+  const video = document.createElement('video')
+  video.controls = true
+  video.style.width='80%'
+  container.appendChild(video)
+
+  const prevBtn = document.createElement('button')
+  prevBtn.textContent = '<'
+  const nextBtn = document.createElement('button')
+  nextBtn.textContent = '>'
+
+  container.appendChild(prevBtn)
+  container.appendChild(nextBtn)
+
+  async function loadVideo(i){
+    const blob = await getFileBlob(currentDisplay[i].name)
+    video.src = URL.createObjectURL(blob)
+    video.play()
+  }
+
+  prevBtn.onclick = async () => {
+    if(index > 0){ index--; await loadVideo(index) }
+  }
+  nextBtn.onclick = async () => {
+    if(index < currentDisplay.length-1){ index++; await loadVideo(index) }
+  }
+
+  await loadVideo(index)
+}
+
+document.getElementById('splice').onclick = () => {
+  parsed.sort((a,b)=>b.t - a.t)
+  setCalendarRanges();
+}
+</script>
+</body>
+</html>

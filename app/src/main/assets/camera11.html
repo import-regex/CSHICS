@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Record camera on motion</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body{background:#222;color:#ddd;font-family:sans-serif;margin:0;padding:0}
+  .viewer{position:relative;background:#000}
+  video{width:100%;height:auto;display:block}
+  #motionBox{position:absolute;top:8px;left:8px;width:30px;height:30px;background:#ff4b4b;display:none;z-index:10}
+  #controls{padding:10px;background:#333;display:grid;gap:6px}
+  label{display:block;font-size:13px;color:#cfd3d8}
+  input,select,button{background:#111;border:1px solid rgba(255,255,255,0.04);color:#e6eef0;padding:6px;border-radius:6px}
+  .row{display:flex;gap:8px;align-items:center}
+  .leftrow{display:flex;gap:8px;align-items:left}
+  #status{color:#9fe6a4}
+  #error{color:#ff9fa0}
+  #logBox{background:#080909;color:#6ff;padding:6px;font:12px/1.2 monospace;height:200px;overflow:auto;white-space:pre-wrap}
+  .small{font-size:12px;color:#9aa0a6}
+</style>
+</head>
+<body>
+<div class="viewer">
+  <video id="video" autoplay playsinline muted></video>
+  <div id="motionBox"></div>
+</div>
+<div id="controls">
+  <label style="flex:1">Upload URL<input id="uploadUrl" type="text" value="http://SERVER_IP:8080/upload"></label>
+  <label style="flex:1">Camera identifier<input id="cameraID" type="text" value="1"></label>
+  <div class="leftrow">
+    <label>camera towards<select id="videoOptions"><option value="environment">them</option><option value="user">me</option></select></label>
+	<label>Record:
+      <select id="camMode">
+        <option value="1">detection</option>
+	    <option value="2">always</option>
+        <option value="0">never</option>    
+      </select>
+    </label>
+  </div>
+  <div class="leftrow">
+    <label >Audio<select id="getAudio"><option value="">No</option><option value="1">Yes (BUGS!)</option></select></label>
+    <label >Hide preview<select id="hidePreview"><option value="">No</option><option value="none">Yes</option></select></label>
+  </div>  	
+  <label>Motion Sensitivity (0-100):<input type="number" id="densitySensitivity" value="50" min="0" max="100"></label>
+  <label>Pixel ensitivity (0-255):<input type="number" id="perPixelThresh" value="30" min="0" max="255"></label>
+  <label>Detection refresh rate (0.1-60):<input type="number" id="hzDetection" value="2" min="0.1" max="60"></label>
+  <label>Record duration (s)<input id="recordSeconds" type="number" min="1" value="5"></label>
+  <button id="applyBtn">Apply</button>
+  <div class="row">
+    <div id="status" style="flex:1">status: idle</div>
+    <div id="error"></div>
+  </div>
+</div>
+<div id="logBox"></div>
+<div> Advanced - video capture</div>
+<div id="videoParams">F H W pending...</div>
+<label>framerate<input type="number" id="captureFPS" value="0"></label>
+<label>height pixels<input type="number" id="heightPX" value="0"></label>
+<label>width pixels<input type="number" id="widthPX" value="0"></label>
+<div> Advanced - Recorder kbits/sec targets</div>
+<label>video<input type="number" id="VBR" value="0">(~200-15000)</label>
+<label>audio<input type="number" id="ABR" value="0">(~32-128)</label>
+<label>recorder codec
+    <select id="mimeType">
+      <option value="">auto</option>
+      <option value="video/webm;codecs=vp9">video/webm;codecs=vp9</option>
+      <option value="video/webm;codecs=vp8">video/webm;codecs=vp8</option>
+      <option value="video/webm;codecs=av1">video/webm;codecs=av1</option>
+      <option value="video/webm;codecs=h264">video/webm;codecs=h264</option>
+      <option value="video/mp4;codecs=avc1.42E01E,mp4a.40.2">video/mp4 (H.264+AAC)</option>
+      <option value="video/mp4;codecs=hev1.1.6.L93.B0">video/mp4 (HEVC/H.265)</option>
+      <option value="video/ogg;codecs=theora,vorbis">video/ogg;codecs=theora,vorbis</option>
+      <option value="audio/webm;codecs=opus">audio/webm;codecs=opus</option>
+      <option value="audio/webm;codecs=vorbis">audio/webm;codecs=vorbis</option>
+      <option value="audio/ogg;codecs=opus">audio/ogg;codecs=opus</option>
+      <option value="audio/ogg;codecs=vorbis">audio/ogg;codecs=vorbis</option>
+      <option value="audio/mp4;codecs=mp4a.40.2">audio/mp4 (AAC)</option>
+      <option value="audio/wav">audio/wav</option>
+    </select>
+  </label>
+<div> Advanced - Detection accuracy</div>
+<label>pixel skip step<input type="number" id="senseStepBytesDiv" value="32"></label>
+<label>magnitude of pixels changed<input type="number" id="changeVolumeDiv" value="20"></label>
+<input type="checkbox" id="wakeHacks">Keep awake hacks<br></input>
+<a id="downloadLink" href="#" download="page.html">Download this document</a><br>
+<a href="#" onclick="navigator.clipboard.writeText('data:text/html,'+encodeURIComponent(document.documentElement.outerHTML))">Copy html to clipboard (URL data)</a>
+
+<script>
+  // DOM
+  const video = document.getElementById('video');
+  const motionBox = document.getElementById('motionBox');
+  const logBox = document.getElementById('logBox');
+  const statusDiv = document.getElementById('status');
+  const errorDiv = document.getElementById('error');
+  const applyBtn = document.getElementById('applyBtn');
+  const videoparamsDiv =document.getElementById('videoParams');
+  const dl = document.getElementById('downloadLink');
+  const offCanvas = document.createElement('canvas');
+  const ctx = offCanvas.getContext ? (offCanvas.getContext('2d', { willReadFrequently: true }) || offCanvas.getContext('2d')) : null;
+
+  // runtime state
+  let stream = null;
+  let prevFrame = null;
+  let detectInterval = null;
+  let recorder = null;
+  let bufferBytes = 0;
+  let isRecording = false;
+  let detectors = 0;
+  let logbuffer=["","","","","","","","",""];
+ 
+  function setParams() {
+    url = document.getElementById('uploadUrl').value;
+	cameraID ="r"+document.getElementById('cameraID').value;
+    hidePreview = document.getElementById('hidePreview').value;
+    camMode = document.getElementById('camMode').value;
+    densitySensitivity = parseInt(document.getElementById('densitySensitivity').value);
+    perPixelThresh = parseInt(document.getElementById('perPixelThresh').value);
+    hzDetection = parseFloat(document.getElementById('hzDetection').value);
+	mime = document.getElementById('mimeType').value;
+    recordSeconds = document.getElementById('recordSeconds').value;
+	videoOptions = { video: {facingMode: document.getElementById('videoOptions').value} }
+	getAudio = document.getElementById('getAudio').value;
+    captureFPS = parseInt(document.getElementById('captureFPS').value);
+	heightPX = parseInt(document.getElementById('heightPX').value);
+	widthPX = parseInt(document.getElementById('widthPX').value);
+	VBR = parseInt(document.getElementById('VBR').value)*1000;
+	ABR = parseInt(document.getElementById('ABR').value)*1000;
+	senseStepBytes = parseInt(document.getElementById('senseStepBytesDiv').value)*4 // skip/jump bytes in frame buffer (4 bytes per pixel) 
+    requiredFraction = parseInt(document.getElementById('changeVolumeDiv').value)/senseStepBytes; // fraction of changed pixels. denominator is proportional to the sense step bytes value
+    wakeHacks = document.getElementById('wakeHacks').checked;
+	
+	periodDetection=(Math.round(1000 / hzDetection));
+    recordMiliSeconds = recordSeconds*1000;
+    denomSampled = 30/(densitySensitivity/100); //sensitivy to changed pixels; lower value=more sensitive
+    recorderOptions = {};
+	fileext="";
+	filename="";
+	
+	if(captureFPS>0) videoOptions.video.frameRate=captureFPS; 
+    if(heightPX>0) videoOptions.video.height=heightPX;
+    if(widthPX>0) videoOptions.video.width=widthPX;	
+	if(VBR>0) recorderOptions.videoBitsPerSecond=VBR;
+	if(ABR>0) recorderOptions.audioBitsPerSecond=ABR;
+	
+	if (getAudio) videoOptions.audio = true; //bugs; works from a file:/// or localhost: on some modern broswers
+	if (mime && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(mime)) {
+      recorderOptions.mimeType = mime;
+	} else {
+	  log('codec type: default')
+	}
+	log("new parameters applied");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    if (window.location.protocol.match(/^https?/g) ) {
+	  document.getElementById('uploadUrl').value = window.location.href.replace(/\/$/,"")+"/upload"
+	}
+  });
+  
+  applyBtn.onclick = () => {
+    setError('');
+	if (detectInterval) clearInterval(detectInterval);
+	setParams();
+	if (camMode === '2' && !wakeHacks) video.style.display=hidePreview;
+//	navigator.wakeLock?.request('screen').catch(log("wakelock not available"));
+	navigator.wakeLock && navigator.wakeLock.request('screen').catch(log("wakelock not available"));
+
+	startCamera();
+  }
+  dl.onclick = () => {
+    const blob = new Blob([document.documentElement.outerHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    dl.href = url; // set the href to the blob URL
+    setTimeout(() => URL.revokeObjectURL(url), 10000); // cleanup after 10s
+  };
+
+  function setStatus(s){ statusDiv.textContent = 'status: ' + s; log(s); }
+  function setError(s){ errorDiv.textContent = s || ''; if(s) log('ERR:', s); }
+  function log(...args) {
+    const s = args.map(
+      a => (typeof a==='object'? JSON.stringify(a): String(a))
+	).join(' ');
+	logbuffer.pop();
+	logbuffer.unshift(s);
+	logBox.textContent=logbuffer.join('\n');
+	logBox.scrollTop = logBox.scrollHeight;
+  }
+
+  function getUserMediaCompat(constraints){
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+	  return navigator.mediaDevices.getUserMedia(constraints);
+    }
+	const legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    if (legacy) {
+	  return new Promise((res, rej) => legacy.call(navigator, constraints, res, rej));
+    }
+	return Promise.reject(new Error('getUserMedia not supported'));
+  }
+  
+  async function startCamera(){
+	 if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+      video.srcObject = null;
+    }
+	try {
+      stream = await getUserMediaCompat(videoOptions);
+      video.srcObject = stream;
+	  if (video.readyState < 2) await new Promise(r => video.onloadeddata = r);
+	  try{
+        if (wakeHacks){
+          new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=').play();
+          video.requestFullscreen && video.requestFullscreen().catch(_=>0);
+        }  
+	    const Vtrack = stream.getVideoTracks()[0];
+	    const Atrack = stream.getAudioTracks()[0];
+		videoparamsDiv.textContent =(
+		  "F "+Vtrack.getSettings().frameRate+
+		  " H "+Vtrack.getSettings().height+
+		  " W "+Vtrack.getSettings().width
+		);   
+		if (getAudio) log("audio runs at "+Atrack.getSettings().sampleRate+"Hz and size "+Atrack.getSettings().sampleSize);
+	  } catch (e) {
+	    log("capture constraints check failed")
+	  }
+	  setStatus('camera running...');
+      if (camMode === '1') startDetection()
+	  if (camMode === '2') keepRecording()
+	} catch (err) {
+      setError('getUserMedia failed: ' + (err && err.message ? err.message : err));
+    }
+  }
+
+  function computeMotion(prev, curr){
+    let changed = 0;
+    // iterate by stride bytes (RGBA bytes)
+    for (let i = 0; i < curr.length; i += senseStepBytes) {
+      // skip if out of bounds of prev (safety)
+      if (i + 2 >= prev.length) break;
+      let d = curr[i] - prev[i]; if (d < 0) d = -d;
+      let d1 = curr[i+1] - prev[i+1]; if (d1 < 0) d1 = -d1; d += d1;
+      let d2 = curr[i+2] - prev[i+2]; if (d2 < 0) d2 = -d2; d += d2;
+      if (d > perPixelThresh) changed++;
+      // early out if target reached 	 
+	  if ((changed / denomSampled) >= requiredFraction) return true; 
+    }
+    return false;
+  }
+ 
+  function startDetection(){
+	detectInterval = setInterval(() => {
+	  if (isRecording) return;
+	  ctx.drawImage(video, 0, 0, offCanvas.width, offCanvas.height);
+      const dat = ctx.getImageData(0,0,offCanvas.width,offCanvas.height).data;
+      if (prevFrame && computeMotion(prevFrame, dat))
+	  startRecording();
+	  prevFrame ? prevFrame.set(dat) : prevFrame = new Uint8ClampedArray(dat);
+	}, periodDetection);
+  }
+
+  async function keepRecording(){
+    while (camMode === '2') {
+      try {
+        await (async () => {
+          return new Promise((resolve) => {
+		    startRecording();
+			if (!recorder) {
+			  resolve(); // Resolve immediately to continue the loop
+              return;
+            }
+            const originalStop = recorder.onstop; 
+            recorder.onstop = () => {
+              if (originalStop) originalStop(); 
+              resolve();
+            };
+          });
+        })(); // <--- You MUST call the anonymous function here!
+      } catch (e) {
+        console.error("Recording loop error:", e);
+        break;
+      }
+    }
+  }
+  
+  function startRecording(){
+    isRecording = true;
+    motionBox.style.display = 'block';
+    setStatus('recording...');
+    try {
+	  recorder = new MediaRecorder(stream, recorderOptions);
+	} catch (e) {
+      log('MediaRecorder creation fail: ' + (e && e.message ? e.message : e));
+      recorder = null;
+	  return;
+    }
+   
+    recorder.ondataavailable = (ev) => {
+	  if (!filename) {
+	    const m = ev.data.type
+        if (/av1/i.test(m)) fileext = 'av1';
+        else if (/(h264|hev1|h265|avc1)/i.test(m)) fileext = 'mp4';
+        else if (/(vp8|vp9|webm)/i.test(m)) fileext = 'webm';
+        else if (/(ogg|opus)/i.test(m)) fileext = 'ogg';
+        else fileext = 'bin';
+        filename = cameraID + '.' + fileext;
+      }
+      uploadBlob(ev.data);
+    }
+	
+    recorder.onerror = (e) => log('recorder error: ' + (e && e.message ? e.message : e));
+	
+	recorder.onstop = () => {
+      log('recorder stopped');
+	  isRecording = false;
+	  recorder = null;
+	  prevFrame = null; //mediarecorder alters the video feed, causing 1-frame false difference.
+      setStatus('camera running...');
+	}
+	
+    recorder.start();
+	setTimeout(() => {
+	  motionBox.style.display = 'none'
+      if (recorder && recorder.state !== 'inactive')
+	  recorder.stop()
+	}, recordMiliSeconds)
+  }
+
+  async function uploadBlob(blob){
+    try {
+      // send as raw POST body with headers; server should accept octet-stream
+      await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-Filename': filename }, body: blob });
+      log('uploaded ' + filename + ' size=' + blob.size);
+    } catch (e) {
+      log('"'+filename+ '" '+blob.size+'B upload to "'+url+'" failed: ' + (e && e.message ? e.message : e));
+    }
+  }
+  log('Page loaded. Scroll down for advanced settings. Press apply to enable the camera with your settings.');
+</script>
+</body>
+</html>
